@@ -1,0 +1,12 @@
+build/
+dist/
+dist_release/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+
+# private: engine source, weights, working folder
+csrc/
+from_fc/
+*.bin
+src/hcawn_fc/_lib/

@@ -1,0 +1,15 @@
+{
+ "repo": "cawnai/hcawn-fc7",
+ "files": {
+  "int8": {
+   "file": "int8.bin",
+   "sha256": "3f03d42546a6597fe9603df0c9f65918aa920539668249939aea1a9e1b3b56bb",
+   "size": 5984373
+  },
+  "int4": {
+   "file": "int4.bin",
+   "sha256": "46729ba9890d405ae52860ab17962fcf874540482597dcd70987c431f06853e9",
+   "size": 3902909
+  }
+ }
+}

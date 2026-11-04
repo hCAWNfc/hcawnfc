@@ -1,0 +1,3 @@
+include LICENSE NOTICE README.md build_native.py
+recursive-include csrc *.cpp
+recursive-include src/hcawn_fc/data *.json *.bin

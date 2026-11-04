@@ -1,0 +1,15 @@
+hcawn-fc
+Copyright 2026 CAWN AI (https://cawnai.com)
+
+This product includes a function-calling model that was trained on:
+
+  * Mobile Actions dataset, Google, licensed under CC BY 4.0
+    (https://creativecommons.org/licenses/by/4.0/). The queries and tool calls were used for
+    training and for the evaluation numbers in the documentation. Changes were made: the
+    data was filtered, augmented with query-form variants, and extended with paraphrases.
+
+  * Paraphrases of the training queries that were generated with a large language model
+    (Gemini 2.5 Flash Lite) and filtered automatically.
+
+The model weights (downloaded separately from Hugging Face) are provided under CC BY 4.0, see README.md.
+The source code is provided under the Apache License 2.0, see LICENSE.

@@ -1,0 +1,113 @@
+{
+ "source": "fc_mobile_eval.jsonl",
+ "tools": [
+  {
+   "name": "open_wifi_settings",
+   "description": "Opens the Wi-Fi settings.",
+   "params": {},
+   "required": []
+  },
+  {
+   "name": "create_contact",
+   "description": "Creates a contact in the phone's contact list.",
+   "params": {
+    "email": {
+     "type": "STRING",
+     "description": "The email address of the contact.",
+     "enum": null
+    },
+    "last_name": {
+     "type": "STRING",
+     "description": "The last name of the contact.",
+     "enum": null
+    },
+    "first_name": {
+     "type": "STRING",
+     "description": "The first name of the contact.",
+     "enum": null
+    },
+    "phone_number": {
+     "type": "STRING",
+     "description": "The phone number of the contact.",
+     "enum": null
+    }
+   },
+   "required": [
+    "first_name",
+    "last_name"
+   ]
+  },
+  {
+   "name": "show_map",
+   "description": "Shows a location on the map.",
+   "params": {
+    "query": {
+     "type": "STRING",
+     "description": "The location to search for. May be the name of a place, a business, or an address.",
+     "enum": null
+    }
+   },
+   "required": [
+    "query"
+   ]
+  },
+  {
+   "name": "create_calendar_event",
+   "description": "Creates a new calendar event.",
+   "params": {
+    "title": {
+     "type": "STRING",
+     "description": "The title of the event.",
+     "enum": null
+    },
+    "datetime": {
+     "type": "STRING",
+     "description": "The date and time of the event in the format YYYY-MM-DDTHH:MM:SS.",
+     "enum": null
+    }
+   },
+   "required": [
+    "title",
+    "datetime"
+   ]
+  },
+  {
+   "name": "send_email",
+   "description": "Sends an email.",
+   "params": {
+    "subject": {
+     "type": "STRING",
+     "description": "The subject of the email.",
+     "enum": null
+    },
+    "body": {
+     "type": "STRING",
+     "description": "The body of the email.",
+     "enum": null
+    },
+    "to": {
+     "type": "STRING",
+     "description": "The email address of the recipient.",
+     "enum": null
+    }
+   },
+   "required": [
+    "to",
+    "subject"
+   ]
+  },
+  {
+   "name": "turn_off_flashlight",
+   "description": "Turns the flashlight off.",
+   "params": {},
+   "required": []
+  },
+  {
+   "name": "turn_on_flashlight",
+   "description": "Turns the flashlight on.",
+   "params": {},
+   "required": []
+  }
+ ],
+ "context": "Current date and time given in YYYY-MM-DDTHH:MM:SS format: 2024-09-15T17:35:19\nDay of week is Sunday\nYou are a model that can do function calling with the following functions\n"
+}
