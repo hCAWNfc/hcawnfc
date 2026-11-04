@@ -33,7 +33,7 @@ def main():
     ap.add_argument("--eval", required=True, help="fc_mobile_eval.jsonl (the tool definitions are taken from it)")
     ap.add_argument("--int8"); ap.add_argument("--int4")
     ap.add_argument("--no-bundle", action="store_true", help="do NOT put the weights into the package; only write their SHA-256 sums (data/weights.json) for hcawn-fc download")
-    ap.add_argument("--repo", default="cawnai/hcawn-fc7", help="Hugging Face repo that hosts the weights")
+    ap.add_argument("--repo", default="datatab/hcawn-fc7", help="Hugging Face repo that hosts the weights")
     a = ap.parse_args()
     src = os.path.abspath(os.path.expanduser(a.src))
     core = os.path.join(ROOT, "src", "hcawn_fc", "_core"); os.makedirs(core, exist_ok=True)

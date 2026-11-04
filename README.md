@@ -91,7 +91,7 @@ Weaker on unusual phrasings ("tell him that ...", "... saying X"). The confidenc
 
 * Code: Apache-2.0.
 * Trained on the **Mobile Actions** dataset (Google, CC BY 4.0) plus query-form augmentation and 16,000 paraphrases of the training queries written by an LLM (Gemini 2.5 Flash Lite) and filtered automatically. Evaluation paraphrases were written by GPT-4o-mini and were never used for training.
-* Model weights: CC BY 4.0 (Hugging Face: https://huggingface.co/cawnai/hcawn-fc7). See `NOTICE`.
+* Model weights: CC BY 4.0 (Hugging Face: https://huggingface.co/datatab/hcawn-fc7). See `NOTICE`.
 
 ## Custom models
 
