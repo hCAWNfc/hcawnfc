@@ -24,8 +24,8 @@ dependencies = ["numpy>=1.21"]
 
 [project.urls]
 Homepage = "https://cawnai.com"
-Demo = "https://cawnai.com"
-
+Repository = "https://github.com/hCAWNfc/hcawnfc"
+Issues = "https://github.com/hCAWNfc/hcawnfc/issues"
 [project.scripts]
 hcawn-fc = "hcawn_fc.cli:main"
 
