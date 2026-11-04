@@ -1,5 +1,7 @@
 # hcawn-fc
 
+[![hCAWN-FC7: Say it. The phone does it.](https://raw.githubusercontent.com/hCAWNfc/hcawnfc/main/assets/og.png)](https://cawnai.com)
+
 A tiny function-calling model (5.7M parameters, byte-level, CPU only) for **7 phone actions**:
 `send_email`, `create_calendar_event`, `create_contact`, `show_map`, `open_wifi_settings`, `turn_on_flashlight`, `turn_off_flashlight`.
 
