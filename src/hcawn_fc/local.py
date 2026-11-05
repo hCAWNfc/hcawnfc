@@ -36,7 +36,7 @@ def find_weights(model="int8", model_path=None):
 
 def available_models():
     out = []
-    for m in ("int8", "int4"):
+    for m in ("int8", "int4", "sr-int8", "sr-int4"):
         try:
             find_weights(m); out.append(m)
         except WeightsNotFound:
@@ -56,7 +56,7 @@ class Local:
         >>> r = m.call("Add a calendar event Team Sync for next Monday at 2pm")
         >>> r.status, str(r.calls[0])
 
-    model:      "int8" (default, fastest on most CPUs) or "int4" (smaller file)
+    model:      "int8" (default, fastest on most CPUs) or "int4" (smaller file); "sr-int8" / "sr-int4" are the Serbian (Latin) models
     model_path: explicit path to a .bin file (overrides the bundled weights)
     threads:    CPU threads for the engine (<=0 means all cores)
     min_conf:   calls with confidence below this are held back (status "held"); 0.9 is the calibrated default

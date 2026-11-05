@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_fix.py - small post-model rules (like fc_dates.py). Currently:
-#   "subject Meeting and body See you at 3pm" (no quotes) -> the model writes subject="Meeting and body".
-#   The rule strips a trailing " and body" / " and the body" / " with the message" ... from the subject,
-#   but ONLY if the body follows right after it in the query (structure "subject S <conjunction> body B").
-#   FC_FIX=0 turns it off.   Test: python fc_fix.py
+# fc_fix.py - mala pravila posle modela (kao fc_dates.py). Za sada jedno:
+#   "subject Meeting and body See you at 3pm" (bez navodnika) -> model upise subject="Meeting and body".
+#   Pravilo skida zavrsno " and body" / " and the body" / " with the message" ... sa subject-a,
+#   ali SAMO ako je body odmah posle toga u upitu (struktura "subject S <veznik> body B").
+#   FC_FIX=0 iskljucuje.   Test: python fc_fix.py test
 # ==========================================================================
 import re, sys, json
 
@@ -15,7 +15,7 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+")
 
 
 def fix_address(out, query):
-    """If the query has EXACTLY one email address and `to`/`email` is only a part of it (e.g. "example.com"), writes the full address."""
+    """Ako upit ima TACNO jednu mejl adresu, a `to`/`email` je samo njen deo (npr. "example.com"), upisuje celu adresu."""
     addrs = set(EMAIL.findall(query))
     if len(addrs) != 1:
         return out, False
@@ -42,7 +42,7 @@ _TAILDT = re.compile(r"[\s,;:.\-]*(?:\b(?:on|at|for|by|from|the)\s+)*" + _ITEM +
 
 
 def strip_title_dt(title):
-    """'Review tomorrow at 9:30 AM' -> 'Review' (strips trailing date/time expressions; never returns an empty title)."""
+    """'Review tomorrow at 9:30 AM' -> 'Review' (skida zavrsne izraze za datum/vreme; nikad ne vraca prazan naslov)."""
     t = title
     for _ in range(4):
         m = _TAILDT.search(t)
@@ -53,7 +53,7 @@ def strip_title_dt(title):
 
 
 def fix_title(out, query):
-    """create_calendar_event: a title that ends with a date/time from the query (already present in `datetime`) -> strips that tail."""
+    """create_calendar_event: naslov koji se zavrsava datumom/vremenom iz upita (a vreme/datum su vec u `datetime`) -> skida taj kraj."""
     try:
         calls = json.loads(out)
     except Exception:
@@ -64,13 +64,15 @@ def fix_title(out, query):
         if not a or c.get("name") != "create_calendar_event" or not isinstance(a.get("title"), str) or not a.get("datetime"):
             continue
         n = strip_title_dt(a["title"])
+        from .fc_sr import strip_title_dt_sr                        # Serbian: 'Trening prekosutra' -> 'Trening'
+        n = strip_title_dt_sr(n)
         if n != a["title"]:
             a["title"] = n; changed = True
     return (json.dumps(calls, ensure_ascii=False, separators=(",", ":")), True) if changed else (out, False)
 
 
 def fix_subject(out, query):
-    """Returns (text, changed)."""
+    """Vraca (tekst, promenjeno)."""
     try:
         calls = json.loads(out)
     except Exception:
@@ -88,7 +90,7 @@ def fix_subject(out, query):
             continue
         ns = s[:m.start()].rstrip()
         i = query.find(s)
-        if not ns or i < 0 or query.find(b, i + len(s)) < 0:     # body must come after the subject in the query
+        if not ns or i < 0 or query.find(b, i + len(s)) < 0:     # body mora doci posle subject-a u upitu
             continue
         a["subject"] = ns; changed = True
     if not changed:
@@ -97,7 +99,7 @@ def fix_subject(out, query):
 
 
 def cmd_check(path):
-    """Apply the rule to the GOLD titles: how many it changes (should be ~0%, otherwise the rule breaks correct answers)."""
+    """Primeni pravilo na ZLATNE naslove: koliko ih menja (treba ~0%, inace pravilo kvari tacne odgovore)."""
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
     n = ch = 0; bad = []
     for ex in rows:
@@ -108,7 +110,7 @@ def cmd_check(path):
                 if strip_title_dt(t) != t:
                     ch += 1
                     if len(bad) < 8: bad.append((t, strip_title_dt(t)))
-    print(f"gold calendar titles: {n} | the rule would change: {ch} ({ch / max(1, n):.2%})")
+    print(f"zlatnih naslova kalendara: {n} | pravilo bi ih promenilo: {ch} ({ch / max(1, n):.2%})")
     for a, b in bad: print(f"   {a!r} -> {b!r}")
 
 
@@ -122,22 +124,22 @@ if __name__ == "__main__":
           '[{"name":"send_email","arguments":{"to":"bob@example.com","subject":"Lunch and body","body":"Are you free today"}}]', "Lunch"),
          ("Email bob with subject Project status and the message Done",
           '[{"name":"send_email","arguments":{"to":"bob","subject":"Project status and the message","body":"Done"}}]', "Project status"),
-         ("Send mail to bob with subject Body and body Hello",          # stays as is
+         ("Send mail to bob with subject Body and body Hello",          # tacno ostaje
           '[{"name":"send_email","arguments":{"to":"bob","subject":"Body","body":"Hello"}}]', "Body"),
-         ("Email bob with subject Meeting and body",                    # no body after it: leave alone
+         ("Email bob with subject Meeting and body",                    # nema body-ja posle: ne dira
           '[{"name":"send_email","arguments":{"to":"bob","subject":"Meeting and body","body":"x"}}]', "Meeting and body")]
     ok = True
     for q, o, want in T:
         t, ch = fix_subject(o, q)
         got = json.loads(t)[0]["arguments"]["subject"]
-        print("OK " if got == want else "ERROR", ch, got); ok &= got == want
+        print("OK " if got == want else "GRESKA", ch, got); ok &= got == want
     for q, o, want in [("Tell bob@example.com that I will be late", '[{"name":"send_email","arguments":{"to":"example.com","body":"I will be late"}}]', "bob@example.com"),
                        ("Email Matt saying hi", '[{"name":"send_email","arguments":{"to":"Matt","body":"hi"}}]', "Matt"),
                        ("Mail a@x.com or b@y.com", '[{"name":"send_email","arguments":{"to":"x.com"}}]', "x.com")]:
         t, ch = fix_address(o, q); got = json.loads(t)[0]["arguments"]["to"]
-        print("OK " if got == want else "ERROR", ch, got); ok &= got == want
+        print("OK " if got == want else "GRESKA", ch, got); ok &= got == want
     for t, want in [("Review tomorrow at 9:30 AM", "Review"), ("Lunch with Bob on Friday", "Lunch with Bob"), ("Call at 3pm", "Call"),
                     ("Team Sync next Monday at 2pm", "Team Sync"), ("Dentist checkup", "Dentist checkup"), ("Friday", "Friday"),
                     ("Call about insurance", "Call about insurance"), ("Meet on May 5th, 2026", "Meet"), ("Pizza night 2026-11-05", "Pizza night")]:
-        got = strip_title_dt(t); print("OK " if got == want else "ERROR", repr(t), "->", repr(got)); ok &= got == want
+        got = strip_title_dt(t); print("OK " if got == want else "GRESKA", repr(t), "->", repr(got)); ok &= got == want
     sys.exit(0 if ok else 1)

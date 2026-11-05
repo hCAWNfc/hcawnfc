@@ -134,3 +134,23 @@ Expected: 90.4% (int8), 90.3% (int4) and 82.8% (rewritten requests), within abou
 
 We build small CPU-only models like this one for **your** tools and your phrasing, and run them on-device or on your own servers.
 Contact: https://cawnai.com (contact form at the bottom).
+
+## Serbian (Latin script)
+
+A separate model understands Serbian requests (Latin script, with or without diacritics, typos included). It is not the English model: it was fine-tuned on Serbian only and is not meant for English.
+
+```bash
+hcawn-fc download sr-int8        # or sr-int4 (3.9 MB)
+hcawn-fc --model sr-int8 "upali lampu"
+hcawn-fc --model sr-int8 "zakazi sastanak sa Markom sutra u 15h"
+```
+
+```python
+from hcawn_fc import Local
+
+m = Local(model="sr-int8")
+r = m.call("dodaj kontakt Marko Petrovic 064 123 4567")
+print(r.status, r.calls)
+```
+
+On 450 requests rewritten as people type them (no diacritics, typos, lowercase), `sr-int8` gets 85.1% exact match and `sr-int4` 84.9%. At the default confidence gate (0.9) the model answers about 80% of requests and about 97% of those answers are exactly right. The weakest tool is `show_map`. The weights are in the Hugging Face repo [datatab/hcawn-fc7-sr](https://huggingface.co/datatab/hcawn-fc7-sr).

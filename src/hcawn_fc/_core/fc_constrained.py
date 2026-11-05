@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_constrained.py - CONSTRAINED DECODING for function calling (Needle style)
+# fc_constrained.py - OGRANICENO DEKODIRANJE za function calling (Needle-stil)
 # ==========================================================================
-# The model still chooses EVERY byte (argmax), but only among the bytes the grammar allows:
-#   [{"name":"<one of the offered names>","arguments":{"<a key of that function>":<valid JSON>,...}},...]
-# So: always valid JSON, the function name and the field names always come from the offered tools,
-# no duplicate fields, required fields must be filled, no broken UTF-8 bytes.
-# The values (what is written inside strings/numbers) are still written ONLY by the model.
+# Model i dalje bira SVAKI bajt (argmax), ali samo medju bajtovima koje gramatika dozvoljava:
+#   [{"name":"<jedno od ponudjenih imena>","arguments":{"<kljuc te funkcije>":<validan JSON>,...}},...]
+# Dakle: uvek validan JSON, ime funkcije i imena polja su uvek iz ponudjenih alata,
+# nema duplih polja, obavezna polja moraju biti popunjena, nema pokvarenih UTF-8 bajtova.
+# Vrednosti (sta pise u stringovima/brojevima) i dalje pise SAMO model.
 #
-#   python fc_constrained.py check fc_mobile_eval.jsonl     # check that the grammar accepts the GOLD answers
-#   python fc_constrained.py fuzz                           # random walk: the output is always valid JSON
+#   python fc_constrained.py check fc_mobile_eval.jsonl     # proveri da li gramatika prihvata ZLATNE odgovore
+#   python fc_constrained.py fuzz                           # nasumicno hodanje: izlaz je uvek validan JSON
 # ==========================================================================
 import json
 import random
@@ -18,7 +18,7 @@ import sys
 EOS = 257
 Q, BS = 0x22, 0x5C
 DIG = set(range(0x30, 0x3A))
-VSTART = {Q, 0x2D, 0x74, 0x66, 0x6E, 0x5B, 0x7B} | DIG          # " - t f n [ {  digits
+VSTART = {Q, 0x2D, 0x74, 0x66, 0x6E, 0x5B, 0x7B} | DIG          # " - t f n [ {  cifre
 ESC_OK = set(b'"\\/bfnrt')
 
 
@@ -43,16 +43,16 @@ def hint_starts(typ):
     return None
 
 
-# Loop protection in free text (e.g. an email body): a string value is closed if (a) it has >= MAX_STR bytes or
-# (b) the last LOOP_SPAN bytes are periodic (period <= 16). The result is always valid JSON instead of 500 repeated bytes.
+# Zastita od petlji u slobodnom tekstu (npr. telo mejla): string vrednost se zatvara ako (a) ima >= MAX_STR bajtova ili
+# (b) poslednjih LOOP_SPAN bajtova su periodicni (period <= 16). Rezultat je uvek validan JSON umesto 500 bajtova ponavljanja.
 import os as _os
 MAX_STR = int(_os.environ.get("FC_MAX_STR", 400))
 LOOP_SPAN = int(_os.environ.get("FC_LOOP_SPAN", 40))
 
 
 class JsonFSM:
-    """Byte-by-byte automaton for one JSON value. advance() returns False if the value is already finished
-    (a number at the top level) and the byte belongs to the outer grammar."""
+    """Bajt-po-bajt automat za jednu JSON vrednost. advance() vraca False ako je vrednost vec zavrsena
+    (broj na vrhu) i bajt pripada spoljnoj gramatici."""
 
     def __init__(self, hint=None, top_terms=b",}"):
         self.stack, self.mode, self.hint, self.first = [], "VALUE", hint, True
@@ -100,7 +100,7 @@ class JsonFSM:
             if self.cont > 0:
                 return set(range(self.lo, self.hi + 1))
             if not self.is_key and (self.stuck or len(self.sbuf) >= MAX_STR):
-                return {Q}                    # loop / overlong string protection: close the quote
+                return {Q}                    # zastita od petlje / predugog stringa: zatvori navodnik
             return (set(range(0x20, 0x80)) - {BS}) | set(range(0xC2, 0xF5)) | {BS}
         if m == "NUM":
             s, T = self.num, self._terms()
@@ -211,12 +211,12 @@ class JsonFSM:
 
 
 class GroundedString:
-    """JSON string whose value must be a LITERAL part of the query (prevents invented numbers/emails)."""
+    """JSON string cija vrednost mora biti DOSLOVAN deo upita (spreca izmisljene brojeve/mejlove)."""
 
     def __init__(self, qbytes, nospace=False):
         self.q, self.mode, self.stack, self.done = qbytes, "G", [], False
         self.pos, self.k, self.opened = None, 0, False
-        self.nospace = nospace                      # e.g. 'to' / 'email': a single word, no spaces
+        self.nospace = nospace                      # npr. 'to' / 'email': samo jedna rec, bez razmaka
 
     def allowed(self):
         if not self.opened:
@@ -240,8 +240,8 @@ class GroundedString:
 
 
 class DatetimeString:
-    """The value of a 'datetime' field must be YYYY-MM-DDTHH:MM:SS with a REAL calendar date and time
-    (prevents '2026-07-34', 'February 30', '2024-03-6thT09th'). Same interface as GroundedString."""
+    """Vrednost polja 'datetime' mora biti GGGG-MM-DDTHH:MM:SS sa STVARNIM kalendarskim datumom i vremenom
+    (spreca '2026-07-34', '30. februar', '2024-03-6thT09th'). Isti interfejs kao GroundedString."""
 
     def __init__(self):
         self.mode, self.stack, self.done = "D", [], False
@@ -289,11 +289,11 @@ class DatetimeString:
 
 
 NOSPACE_KEYS = set(k for k in _os.environ.get("FC_NOSPACE", "to,email,recipient").split(",") if k)
-DT_KEYS = set(k for k in _os.environ.get("FC_DT_KEYS", "datetime").split(",") if k)     # empty = disabled
+DT_KEYS = set(k for k in _os.environ.get("FC_DT_KEYS", "datetime").split(",") if k)     # prazno = iskljuceno
 
 
 def gate(key, query):
-    """A field may be offered at all only if the query can contain it."""
+    """Polje se sme uopste ponuditi samo ako upit moze da ga sadrzi."""
     k = key.lower()
     if "phone" in k:
         return sum(c.isdigit() for c in query) >= 5
@@ -321,10 +321,10 @@ class FCGrammar:
         self.name_trie = _trie(list(self.tools))
         self.phase, self.queue, self.after = "FORCED", bytearray(b"["), "CALL0"
         self.node, self.tool, self.used, self.fsm = None, None, set(), None
-        self.force_call = False                           # True => the first call is mandatory (no "[]")
-        self.cur_key = None                               # key whose value is being written right now (for the confidence score)
+        self.force_call = False                           # True => prvi poziv je obavezan (nema "[]")
+        self.cur_key = None                               # kljuc cija se vrednost trenutno pise (za skor pouzdanosti)
 
-    # ------------------------------------------------------------ helpers
+    # ------------------------------------------------------------ pomocno
     def _force(self, s, nxt):
         self.queue, self.after, self.phase = bytearray(s), nxt, "FORCED"
 
@@ -415,7 +415,7 @@ class FCGrammar:
         if p in ("KEY0", "KEYQ"):
             if b == Q:
                 self._start_key()
-            else:                                     # '}' closes arguments
+            else:                                     # '}' zatvara arguments
                 self._force(b"}", "CALLN")
             return
         if p == "KEY":
@@ -435,7 +435,7 @@ class FCGrammar:
                 self.node = self.node[b]
             return
         if p == "VAL":
-            if not self.fsm.advance(b):               # number finished, the byte belongs to us
+            if not self.fsm.advance(b):               # broj zavrsen, bajt pripada nama
                 self.phase = "AFTERVAL"
                 return self.advance(b)
             if self.fsm.done:
@@ -457,12 +457,12 @@ class FCGrammar:
             self.phase = "DONE"
 
 
-# ------------------------------------------------------------------ generation
+# ------------------------------------------------------------------ generisanje
 def constrained_generate(model, tok, device, ids, tools, max_new=400, typed=True, enforce_required=True,
                          query=None, ground=(), chunk=False):
-    """Like pii_common.greedy_generate, but every byte must be allowed by the grammar.
-    chunk=True: bytes the grammar already knows (the only allowed option) are sent to the model AT ONCE
-    (one forward pass for several bytes) - same output, fewer model calls."""
+    """Kao pii_common.greedy_generate, ali svaki bajt mora da bude dozvoljen gramatikom.
+    chunk=True: bajtovi koje gramatika vec zna (jedina dozvoljena opcija) se modelu salju ODJEDNOM
+    (jedan forward za vise bajtova) - isti izlaz, manje poziva modela."""
     import torch
     g = FCGrammar(tools, typed, enforce_required, query, ground)
     eos = tok.eos_token_id
@@ -502,9 +502,9 @@ def constrained_generate(model, tok, device, ids, tools, max_new=400, typed=True
     return bytes(t for t in out if t < 256).decode("utf-8", errors="replace")
 
 
-# ------------------------------------------------------------------ checks
+# ------------------------------------------------------------------ provere
 def accepts(ex, typed=True, enforce=True, ground=()):
-    """Does the grammar accept the gold answer? Returns (ok, error_position, description)."""
+    """Da li gramatika prihvata zlatni odgovor? Vraca (ok, pozicija_greske, opis)."""
     from .fc_common import render_output
     data = render_output(ex["calls"]).encode("utf-8") + bytes([0])
     g = FCGrammar(ex["tools"], typed, enforce, str(ex["query"]).strip() if ground else None, ground)
@@ -530,11 +530,11 @@ def cmd_check(path):
                 if shown < 3 and gr:
                     print("   ", why)
                     shown += 1
-        print(f"typed={typed!s:5} required={enf!s:5} ground={','.join(gr) or '-':18}: accepts {1 - bad / len(rows):.1%} of gold answers ({bad} rejected out of {len(rows)})")
+        print(f"typed={typed!s:5} required={enf!s:5} ground={','.join(gr) or '-':18}: prihvata {1 - bad / len(rows):.1%} zlatnih odgovora ({bad} odbijeno od {len(rows)})")
 
 
 def cmd_stats(path):
-    """For each field: how many gold STRING values are a literal part of the query? (to choose what may go into 'ground')"""
+    """Za svako polje: koliko zlatnih STRING vrednosti je doslovan deo upita? (da izaberemo sta sme u 'ground')"""
     from collections import defaultdict
     st = defaultdict(lambda: [0, 0])
     for l in open(path, encoding="utf-8"):
@@ -547,7 +547,7 @@ def cmd_stats(path):
                 if isinstance(v, str):
                     st[k][0] += 1
                     st[k][1] += v in q
-    print(f"{'field':28} {'n':>5}  literal in query")
+    print(f"{'polje':28} {'n':>5}  doslovno u upitu")
     for k, (n, g) in sorted(st.items(), key=lambda x: -x[1][0]):
         print(f"{k:28} {n:5d}  {g / n:6.1%}")
 
@@ -588,9 +588,9 @@ def cmd_fuzz(n=3000):
                 good &= set(c["arguments"]) <= set(t["params"]) and all(r in c["arguments"] for r in t["required"])
         ok += good
         if not good:
-            print("BAD:", bytes(out)[:200])
+            print("LOSE:", bytes(out)[:200])
             return
-    print(f"fuzz: {done} finished outputs out of {n}, all valid JSON + correct names/fields: {ok == done}")
+    print(f"fuzz: {done} zavrsenih izlaza od {n}, svi validan JSON + ispravna imena/polja: {ok == done}")
 
 
 if __name__ == "__main__":

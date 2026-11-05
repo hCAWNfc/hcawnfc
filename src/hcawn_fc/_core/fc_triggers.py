@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_triggers.py - regex triggers (like Needle's "triggers"): if the query matches a tool's trigger, the model chooses ONLY among
-# the matched tools and MUST produce a call (it cannot answer []). Tools without a defined trigger always stay allowed.
-# If no trigger matches, nothing changes (the model works on its own and may also decline).
-#   python fc_triggers.py check fc_mobile_eval.jsonl     # no model: trigger coverage on your set and on query variants
-#   FC_TRIGGERS=0 turns it off (on by default)
+# fc_triggers.py - regex okidaci (kao Needle "triggers"): ako upit pogodi okidac alata, model bira SAMO medju pogodjenim
+# alatima i MORA da da poziv (ne moze [] ). Alati bez definisanog okidaca ostaju uvek dozvoljeni.
+# Ako nijedan okidac ne pogodi, nista se ne menja (model radi sam, moze i da odbije).
+#   python fc_triggers.py check fc_mobile_eval.jsonl     # bez modela: pokrivenost okidaca na tvom skupu + na varijantama upita
+#   FC_TRIGGERS=0 iskljucuje (podrazumevano ukljuceno)
 # ==========================================================================
 import re, os, sys, json
 
@@ -23,8 +23,10 @@ ENABLED = os.environ.get("FC_TRIGGERS", "1") == "1"
 
 
 def matched(query, names):
-    """Set of tool names (from `names`) whose trigger matched; [] if none."""
-    return [n for n in names if n in RX and any(r.search(query) for r in RX[n])]
+    """Skup imena alata (iz `names`) ciji okidac je pogodjen; [] ako nijedan."""
+    from .fc_sr import sr_matched                                    # Serbian triggers (fc_sr.py)
+    sr = set(sr_matched(query, names))
+    return [n for n in names if n in RX and (any(r.search(query) for r in RX[n]) or n in sr)]
 
 
 def has_trigger_tools(names):
@@ -32,14 +34,14 @@ def has_trigger_tools(names):
 
 
 def restrict(tools, query):
-    """Returns (tools_for_the_grammar, force_call). If nothing matched, returns the original tools and False."""
+    """Vraca (alati_za_gramatiku, prisili_poziv). Ako nema pogotka, vraca originalne alate i False."""
     if not ENABLED or not query:
         return tools, False
     names = [t["name"] for t in tools]
     m = set(matched(query, names))
     if not m:
         return tools, False
-    keep = [t for t in tools if t["name"] in m or t["name"] not in RX]       # tools without a trigger stay
+    keep = [t for t in tools if t["name"] in m or t["name"] not in RX]       # alati bez okidaca ostaju
     return keep, True
 
 
@@ -48,7 +50,7 @@ def cmd_check(path):
     from .fc_augment import has_quotes, strip_quotes, saying_form, dropthe_form, emailverb_form, droptitled_form
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
     forms = {"orig": lambda q: q, "noquote": strip_quotes, "saying": saying_form, "emailverb": emailverb_form, "droptitled": droptitled_form}
-    print(f"{'form':11}{'no match':>14}{'single tool':>12}{'has gold':>10}{'GOLD DROPPED':>14}   (n={len(rows)})")
+    print(f"{'oblik':11}{'nema pogotka':>14}{'sam alat':>10}{'ima gold':>10}{'GOLD ISPADA':>13}   (n={len(rows)})")
     bad = []
     for fn, f in forms.items():
         none = one = hit = miss = 0
@@ -66,10 +68,10 @@ def cmd_check(path):
                 miss += 1
                 if fn == "orig" and len(bad) < 8: bad.append((q[:110], sorted(gold), sorted(keep)))
         n = len(rows)
-        print(f"{fn:11}{none/n:>14.1%}{one/n:>12.1%}{hit/n:>10.1%}{miss/n:>14.1%}")
-    print("\nGOLD DROPPED = a trigger matched some tool, but the right tool is not among the matched ones (the rule hurts there).")
+        print(f"{fn:11}{none/n:>14.1%}{one/n:>10.1%}{hit/n:>10.1%}{miss/n:>13.1%}")
+    print("\nGOLD ISPADA = okidac je pogodio neki alat, ali pravi alat nije medju pogodjenima (tu pravilo kvari).")
     for q, g, k in bad:
-        print(f"\n  query: {q}\n  gold: {g} | allowed: {k}")
+        print(f"\n  upit: {q}\n  zlatno: {g} | dozvoljeno: {k}")
 
 
 if __name__ == "__main__":

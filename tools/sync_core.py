@@ -13,7 +13,7 @@ What it does:
 """
 import argparse, hashlib, json, os, re, shutil, sys
 
-CORE = ["fc_common", "fc_conf", "fc_dates", "fc_fix", "fc_triggers", "fc_constrained", "fc_augment", "hcawn_cpp"]
+CORE = ["fc_common", "fc_conf", "fc_dates", "fc_fix", "fc_triggers", "fc_constrained", "fc_augment", "fc_sr", "hcawn_cpp"]
 IMPORT_RE = re.compile(r"^(\s*)from (" + "|".join(CORE) + r") import ", re.M)
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--src", required=True, help="folder with fc_*.py (sft/fc)")
     ap.add_argument("--eval", required=True, help="fc_mobile_eval.jsonl (the tool definitions are taken from it)")
     ap.add_argument("--int8"); ap.add_argument("--int4")
+    ap.add_argument("--sr-int8"); ap.add_argument("--sr-int4")
+    ap.add_argument("--sr-repo", default="datatab/hcawn-fc7-sr", help="Hugging Face repo with the Serbian weights (int8.bin, int4.bin)")
     ap.add_argument("--no-bundle", action="store_true", help="do NOT put the weights into the package; only write their SHA-256 sums (data/weights.json) for hcawn-fc download")
     ap.add_argument("--repo", default="datatab/hcawn-fc7", help="Hugging Face repo that hosts the weights")
     a = ap.parse_args()
@@ -56,12 +58,13 @@ def main():
     json.dump(blob, open(os.path.join(data, "tools.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"  tools.json: {len(best['tools'])} tools ({', '.join(t['name'] for t in best['tools'])})")
     files = {}
-    for tag, p in (("int8", a.int8), ("int4", a.int4)):
+    for tag, p in (("int8", a.int8), ("int4", a.int4), ("sr-int8", a.sr_int8), ("sr-int4", a.sr_int4)):
         dst = os.path.join(data, tag + ".bin")
         if p:
             srcp = find(src, p) if not os.path.isfile(p) else p
             raw = open(srcp, "rb").read()
-            files[tag] = {"file": f"{tag}.bin", "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)}
+            files[tag] = {"file": (tag[3:] if tag.startswith("sr-") else tag) + ".bin", "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)}
+            if tag.startswith("sr-"): files[tag]["repo"] = a.sr_repo
             if a.no_bundle:
                 if os.path.isfile(dst): os.remove(dst)
                 print(f"  {tag}.bin ({len(raw) / 1e6:.1f} MB, sha256 {files[tag]['sha256'][:12]}) not bundled, checksum only")

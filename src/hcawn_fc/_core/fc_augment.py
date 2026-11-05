@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_augment.py - automatic augmentation of the query FORM for function-calling SFT.
-# It only changes how the query is written (quotes, "Please", "subject: X, body: Y"); the gold answer stays the same.
-# A transformation is applied ONLY if every string value of the gold answer that was in the original query
-# is still in the new query (otherwise the original is returned), so training gets no inconsistent examples.
-#   python fc_augment.py check fc_mobile_train.jsonl [p]      # statistics + examples, no training
+# fc_augment.py - automatska augmentacija FORME upita za function calling SFT.
+# Menja samo kako je upit napisan (navodnici, "Please", "subject: X, body: Y"); zlatni odgovor ostaje isti.
+# Transformacija se primeni SAMO ako svaka string vrednost iz zlatnog odgovora koja je bila u originalnom upitu
+# ostaje u novom upitu (inace se vraca original), pa trening ne dobija neslozene primere.
+#   python fc_augment.py check fc_mobile_train.jsonl [p]      # statistika + primeri, bez treninga
 # ==========================================================================
 import re, sys, json, random
 
-_SQ = re.compile(r"(?<![A-Za-z0-9])'(.+?)'(?![A-Za-z0-9])")      # an apostrophe inside a word (I've) is not a quote
+_SQ = re.compile(r"(?<![A-Za-z0-9])'(.+?)'(?![A-Za-z0-9])")      # apostrof u reci (I've) nije navodnik
 _DQ = re.compile(r'"(.+?)"')
 _PLEASE = re.compile(r"^(?:could you |can you |would you )?please,?\s+", re.I)
 
@@ -30,7 +30,7 @@ def strip_please(q):
 
 
 def colon_form(q):
-    """'... with the subject X and the body Y' -> '... subject: X, body: Y' (expects the quotes to be already stripped)."""
+    """'... with the subject X and the body Y' -> '... subject: X, body: Y' (ocekuje vec skinute navodnike)."""
     q = re.sub(r"\b(?:with|and)? ?the subject (?:line )?(?:should be |is |of )?", " subject: ", q, flags=re.I)
     q = re.sub(r"\s*(?:,|\.)?\s*(?:and )?(?:with )?the (?:message )?(?:body|message|text)(?: of the (?:email|message))? (?:should be |is |of |reading )?",
                ", body: ", q, flags=re.I)
@@ -38,7 +38,7 @@ def colon_form(q):
 
 
 def saying_form(q):
-    """EVAL only (not used in training): '... subject X and the body Y' -> '... subject X saying Y'."""
+    """Samo za EVAL (nije u treningu): '... subject X and the body Y' -> '... subject X saying Y'."""
     q = strip_quotes(q)
     return re.sub(r"\s+(?:and )?(?:with )?the (?:message )?(?:body|message|text)(?: of the (?:email|message))? (?:should be |is |of |reading )?",
                   " saying ", q, flags=re.I)
@@ -66,16 +66,16 @@ def semicolon_form(q):
 
 
 def lowerfirst_form(q):
-    """EVAL only: lower-case first letter ('send an email ...')."""
+    """Samo za EVAL: prvo slovo malo ('send an email ...')."""
     return q[:1].lower() + q[1:]
 
 
 def hey_form(q):
-    """EVAL only: 'Hey, send an email ...'."""
+    """Samo za EVAL: 'Hey, send an email ...'."""
     return "Hey, " + lowerfirst_form(q)
 
 
-TRAIN_TRANSFORMS = [            # (name, weight, function)
+TRAIN_TRANSFORMS = [            # (ime, tezina, funkcija)
     ("noquote", 0.25, strip_quotes),
     ("noq_noplz", 0.12, lambda q: strip_please(strip_quotes(q))),
     ("colon", 0.12, lambda q: colon_form(strip_quotes(q))),
@@ -99,12 +99,12 @@ def str_leaves(x):
 
 
 def safe(old_q, new_q, calls):
-    """Every gold string value that was in the old query must remain in the new one."""
+    """Svaka zlatna string vrednost koja je bila u starom upitu mora ostati u novom."""
     return all(s in new_q for s in str_leaves([c.get("arguments", {}) for c in calls]) if s and s in old_q)
 
 
 def augment(ex, rng, p=0.6):
-    """Returns (example, transformation_name or None)."""
+    """Vraca (primer, ime_transformacije ili None)."""
     if rng.random() >= p:
         return ex, None
     q = str(ex["query"])
@@ -130,6 +130,6 @@ if __name__ == "__main__":
         if n:
             changed += 1; cnt[n] = cnt.get(n, 0) + 1
             if shown < 14 and n in ("dropthe", "emailverb", "droptitled", "semicolon"):
-                print("BEFORE:", ex["query"][:170]); print("AFTER :", o["query"][:170]); print(); shown += 1
-    print(f"examples {len(rows)} | changed {changed} ({changed/len(rows):.1%}) at p={p} | by kind: {cnt}")
-    print(f"queries with quotes: {sum(has_quotes(str(r['query'])) for r in rows)}")
+                print("PRE :", ex["query"][:170]); print("POSLE:", o["query"][:170]); print(); shown += 1
+    print(f"primera {len(rows)} | izmenjeno {changed} ({changed/len(rows):.1%}) pri p={p} | po vrsti: {cnt}")
+    print(f"upita sa navodnicima: {sum(has_quotes(str(r['query'])) for r in rows)}")

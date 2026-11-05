@@ -10,6 +10,18 @@
    "file": "int4.bin",
    "sha256": "46729ba9890d405ae52860ab17962fcf874540482597dcd70987c431f06853e9",
    "size": 3902909
+  },
+  "sr-int8": {
+   "file": "int8.bin",
+   "sha256": "60d227cf9ba02bbef40d7e760af13f88a40580a71b7c7d1dd8fae0e3b19ec78c",
+   "size": 5984373,
+   "repo": "datatab/hcawn-fc7-sr"
+  },
+  "sr-int4": {
+   "file": "int4.bin",
+   "sha256": "2072f111f436ae0f15a7ce61d674b9a1aebc615804805cc5074f719957012ee5",
+   "size": 3869653,
+   "repo": "datatab/hcawn-fc7-sr"
   }
  }
 }

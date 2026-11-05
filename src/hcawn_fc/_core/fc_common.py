@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_common.py - shared helpers for function calling (no torch, can be tested anywhere)
-#   - normalize_tool : various tool formats -> one format
-#   - render_prompt  : compact prompt (tools + query)
-#   - render_output  : [{"name":..,"arguments":{..}}] (compact JSON)
-#   - parse_calls    : model text -> list of calls (or None if it is not valid JSON)
-#   - score_one      : strict comparison (names, ORDER and every argument value)
+# fc_common.py - zajednicko za function calling (bez torch-a, moze da se testira svuda)
+#   - normalize_tool : razni formati alata -> jedan format
+#   - render_prompt  : kompaktan prompt (alati + upit)
+#   - render_output  : [{"name":..,"arguments":{..}}] (kompaktan JSON)
+#   - parse_calls    : tekst modela -> lista poziva (ili None ako nije validan JSON)
+#   - score_one      : strogo poredjenje (imena, REDOSLED i sve vrednosti argumenata)
 # ==========================================================================
 import json
 import re
 
-DESC_MAX = 100     # max bytes of a tool description
-PDESC_MAX = 50     # max bytes of a parameter description
+DESC_MAX = 100     # max bajtova opisa alata
+PDESC_MAX = 50     # max bajtova opisa parametra
 
 PROMPT = "### Tools:\n{tools}\n\n{context}### Query:\n{query}\n\n### Call:\n"
 
@@ -31,7 +31,7 @@ def _jl(x):
 
 
 def normalize_tool(t):
-    """Returns {"name","description","params":{pname:{"type","description","enum"}},"required":[...]} or None."""
+    """Vraca {"name","description","params":{pname:{"type","description","enum"}},"required":[...]} ili None."""
     t = _jl(t)
     if not isinstance(t, dict):
         return None
@@ -53,7 +53,7 @@ def _normalize(t):
         props = params["properties"]
         req = params.get("required")
         req = [str(x) for x in req] if isinstance(req, list) else []
-    elif isinstance(params, dict):                                                    # xLAM style: {arg:{type,description,default}}
+    elif isinstance(params, dict):                                                    # xLAM stil: {arg:{type,description,default}}
         props = {k: v for k, v in params.items() if isinstance(v, dict)}
         req = [k for k, v in props.items() if "default" not in v and not str(v.get("type", "")).startswith("Optional")]
     out = {}
@@ -128,7 +128,7 @@ def _norm(v):
 
 
 def score_one(pred_text, gold_calls):
-    """Returns a dict: valid, names (names and order), exact (names + all arguments, order matters), any_order."""
+    """Vraca dict: valid, names (imena i redosled), exact (imena + svi argumenti, redosled bitan), exact_any_order."""
     pred = parse_calls(pred_text)
     if pred is None:
         return {"valid": 0, "names": 0, "exact": 0, "any_order": 0}
@@ -161,5 +161,5 @@ if __name__ == "__main__":
     assert score_one(o, ex["calls"])["exact"] == 1
     assert score_one('[{"name":"set_alarm","arguments":{"hour":7.0}}]', ex["calls"])["exact"] == 1
     assert score_one('[{"name":"set_alarm","arguments":{"hour":8}}]', ex["calls"])["names"] == 1
-    assert score_one("not json", ex["calls"])["valid"] == 0
+    assert score_one("nije json", ex["calls"])["valid"] == 0
     print("fc_common selftest OK")

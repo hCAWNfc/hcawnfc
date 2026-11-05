@@ -36,7 +36,8 @@ def download_weights(model="int8", base_url=None, progress=True):
                 print(f"{n}: already downloaded ({dst})")
             out.append(dst)
             continue
-        url = f"{base}/{info['file']}"
+        src = base if (base_url or os.environ.get("HCAWN_FC_WEIGHTS_URL") or not info.get("repo")) else f"https://huggingface.co/{info['repo']}/resolve/main"
+        url = f"{src}/{info['file']}"
         if progress:
             print(f"{n}: downloading {url} ({info['size'] / 1e6:.1f} MB)", flush=True)
         tmp = dst + ".part"

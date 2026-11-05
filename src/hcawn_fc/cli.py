@@ -75,10 +75,10 @@ def chat(be, as_json):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="hcawn-fc", description="Tiny function-calling model for 7 phone actions.")
-    ap.add_argument("query", nargs="*", help="request, e.g. \"Turn on the flashlight\" (or: doctor, chat, download [int8|int4|all])")
+    ap.add_argument("query", nargs="*", help="request, e.g. \"Turn on the flashlight\" (or: doctor, chat, download [int8|int4|sr-int8|sr-int4|all])")
     ap.add_argument("--api", action="store_true", help="use the hosted API instead of the local model")
     ap.add_argument("--url", help="API base url (default https://cawnai.com)")
-    ap.add_argument("--model", default="int8", help="int8 (default) or int4")
+    ap.add_argument("--model", default="int8", help="int8 (default), int4, sr-int8 or sr-int4 (Serbian, Latin script)")
     ap.add_argument("--model-path", help="path to a model .bin file")
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--min-conf", type=float, default=0.9)

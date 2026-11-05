@@ -9,7 +9,7 @@ OUT=dist_release
 rm -rf "$OUT" dist; mkdir -p "$OUT"
 
 # 1) refresh the core from sft/fc; the weights do NOT go into the wheel, only their SHA-256 sums (hcawn-fc download)
-python tools/sync_core.py --src from_fc --eval fc_mobile_eval.jsonl --int8 model5_int8.bin --int4 model5_C_pack.bin --no-bundle
+python tools/sync_core.py --src from_fc --eval fc_mobile_eval.jsonl --int8 model5_int8.bin --int4 model5_C_pack.bin --sr-int8 model9sr_int8.bin --sr-int4 model9sr_C_pack.bin --no-bundle
 
 # 2) engine wheel inside a manylinux container (so it runs on older Linux systems). It builds a copy under /tmp and
 #    hands the result back to dist_release/ owned by you (so no root-owned files are left in your folder).

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # ==========================================================================
-# fc_dates.py - a rule for relative dates (tomorrow, Friday, next Monday, in 3 days) instead of the model.
-# It takes "now" from the context, computes the DATE and writes it into "datetime" (the time of day stays what the model wrote).
-# It only acts when: the query has EXACTLY one relative expression, no explicit date (June 20th, 2026-02-10, 3/15...),
-# and the output has exactly one "datetime". In every other case the output is left untouched.
-#   python fc_dates.py check fc_mobile_train.jsonl      # calibrate the convention on your data (no model)
-#   FC_DATES=1  [FC_DATE_CONV=bare=today,next=upcoming]  python fc_eval_cpp.py ...    # turns the rule on
+# fc_dates.py - pravilo za relativne datume (tomorrow, Friday, next Monday, in 3 days) umesto modela.
+# Uzima "sada" iz konteksta, racuna DATUM i upisuje ga u "datetime" (vreme dana ostaje ono sto je model napisao).
+# Dira samo kad: upit ima TACNO jedan relativni izraz, nema eksplicitnog datuma (June 20th, 2026-02-10, 3/15...),
+# i u izlazu ima tacno jedan "datetime". U svim ostalim slucajevima izlaz ostaje netaknut.
+#   python fc_dates.py check fc_mobile_train.jsonl      # kalibracija konvencije na tvojim podacima (bez modela)
+#   FC_DATES=1  [FC_DATE_CONV=bare=today,next=upcoming]  python fc_eval_cpp.py ...    # ukljucuje pravilo
 # ==========================================================================
 import os, re, sys, json, datetime as dt
 
@@ -25,11 +25,11 @@ NOW_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})")
 
 TIME_AP = re.compile(r"(?<![\d:/-])(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\b", re.I)
 TIME_24 = re.compile(r"(?<![\d:/-])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])")
-TIMES_ENV = os.environ.get("FC_TIMES", "1") == "1"       # FC_TIMES=0 turns off the clock rule ("2pm" -> 14:00:00)
+TIMES_ENV = os.environ.get("FC_TIMES", "1") == "1"       # FC_TIMES=0 iskljucuje pravilo za sat ("2pm" -> 14:00:00)
 
 
 def resolve_time(query):
-    """'HH:MM:SS' if the query has EXACTLY one time expression (2pm, 2:30 PM, 14:30), otherwise None."""
+    """'HH:MM:SS' ako upit ima TACNO jedan izraz za vreme (2pm, 2:30 PM, 14:30), inace None."""
     hits = set()
     for h, m, ap in TIME_AP.findall(query):
         h, m = int(h), int(m or 0)
@@ -46,7 +46,7 @@ def resolve_time(query):
 
 
 def parse_conv(s):
-    c = {"bare": "today", "next": "nextweek"}      # convention measured on Mobile Actions (98.3% agreement)
+    c = {"bare": "today", "next": "nextweek"}      # konvencija izmerena na Mobile Actions (98,3% slaganja)
     for part in (s or "").split(","):
         if "=" in part:
             k, v = part.split("=", 1); c[k.strip()] = v.strip()
@@ -56,24 +56,24 @@ def parse_conv(s):
 CONV = parse_conv(os.environ.get("FC_DATE_CONV", ""))
 
 
-# ---- explicit date in the query ("July 10th, 2025", "10 July", "Feb 4th"): month and day are taken from the query, not from the model ----
+# ---- eksplicitan datum u upitu ("July 10th, 2025", "10 July", "Feb 4th"): mesec i dan se uzimaju iz upita, ne od modela ----
 MON = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
-EXPLICIT_ENV = os.environ.get("FC_EXPLICIT", "1") == "1"      # FC_EXPLICIT=0 turns this rule off
+EXPLICIT_ENV = os.environ.get("FC_EXPLICIT", "1") == "1"      # FC_EXPLICIT=0 iskljucuje ovo pravilo
 RE_MD = re.compile(rf"\b({MONTHS})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?\b(?:\s*,?\s*(\d{{4}})\b)?", re.I)
 RE_DM = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?({MONTHS})\b\.?(?:\s*,?\s*(\d{{4}})\b)?", re.I)
 RE_NUMDATE = re.compile(r"\b\d{4}-\d{1,2}-\d{1,2}\b|\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
 
 
 def resolve_explicit(query):
-    """(month, day, year|None) if the query has EXACTLY one explicit date with a month name, otherwise None.
-    Numeric forms (2025-07-10, 7/10) and two different dates in the query => None (left alone)."""
+    """(mesec, dan, godina|None) ako upit ima TACNO jedan eksplicitan datum sa imenom meseca, inace None.
+    Brojcani oblici (2025-07-10, 7/10) i dva razlicita datuma u upitu => None (ne diramo)."""
     q = str(query)
     if RE_NUMDATE.search(q):
         return None
     hits = set()
     for m in RE_MD.finditer(q):
         mon, d, y = m.group(1), m.group(2), m.group(3)
-        if mon.lower() == "may" and mon != "May": continue          # "may" as a verb
+        if mon.lower() == "may" and mon != "May": continue          # "may" kao glagol
         hits.add((MON[mon[:3].lower()], int(d), int(y) if y else None))
     for m in RE_DM.finditer(q):
         d, mon, y = m.group(1), m.group(2), m.group(3)
@@ -100,7 +100,7 @@ def parse_now(context):
 
 
 def resolve(query, now, conv=None):
-    """Returns (date, class) or None if the query does not have EXACTLY one relative expression or has an explicit date."""
+    """Vraca (datum, klasa) ili None ako upit nema TACNO jedan relativni izraz ili ima eksplicitan datum."""
     conv = conv or CONV
     if now is None or EXPLICIT.search(query):
         return None
@@ -120,7 +120,7 @@ def resolve(query, now, conv=None):
             strict = delta if delta else 7
             if mode == "upcoming": d = strict
             elif mode == "plus7": d = strict + 7
-            elif mode == "nextweek": d = (7 - now.weekday()) + w         # Monday of next week + w
+            elif mode == "nextweek": d = (7 - now.weekday()) + w         # ponedeljak sledece nedelje + w
             else: raise ValueError(mode)
             hits.append(("next_wd", d))
         else:
@@ -133,8 +133,12 @@ def resolve(query, now, conv=None):
 
 
 def fix_dates_ex(out, query, context, conv=None):
-    """Like fix_dates, but returns (text, changed, applied). applied: "" | "d" | "t" | "dt" =
-    the rule DETERMINED the date (d) and/or the time (t), even if the model had already got it right."""
+    """Kao fix_dates, ali vraca (tekst, promenjeno, primenjeno). primenjeno: "" | "d" | "t" | "dt" =
+    pravilo je ODREDILO datum (d) i/ili sat (t), cak i ako je model vec pogodio."""
+    from .fc_sr import norm_for_dates, fold                         # Serbian date/time words -> the English forms below (fc_sr.py)
+    _n = norm_for_dates(query)
+    if _n != fold(query):
+        query = _n
     now = parse_now(context)
     r = resolve(str(query), now, conv) if now is not None else None
     t = resolve_time(str(query)) if TIMES_ENV else None
@@ -152,7 +156,7 @@ def fix_dates_ex(out, query, context, conv=None):
     c, k = slots[0]
     old = c["arguments"][k]
     day = r[0].isoformat() if r is not None else old[:10]
-    if e is not None:                                              # month and day from the query; year from the query, and if absent the model's year stays
+    if e is not None:                                              # mesec i dan iz upita; godina iz upita, a ako je nema, ostaje modelova
         try:
             day = dt.date(e[2] or int(old[:4]), e[0], e[1]).isoformat()
         except ValueError:
@@ -166,12 +170,12 @@ def fix_dates_ex(out, query, context, conv=None):
 
 
 def fix_dates(out, query, context, conv=None):
-    """Post-processes the model JSON output. Returns (text, changed)."""
+    """Postprocesira JSON izlaz modela. Vraca (tekst, promenjeno)."""
     t, ch, _ = fix_dates_ex(out, query, context, conv)
     return t, ch
 
 
-# ------------------------------------------------------------------ calibration
+# ------------------------------------------------------------------ kalibracija
 def cmd_check_time(rows):
     ok = tot = 0
     bad = []
@@ -183,9 +187,9 @@ def cmd_check_time(rows):
             tot += 1; ok += dts[0][11:] == t
             if dts[0][11:] != t and len(bad) < 6:
                 bad.append((str(ex["query"])[:120], t, dts[0][11:]))
-    print(f"\nTIME: rows with one time expression and one datetime: {tot} | the rule agrees with gold: {ok / max(1, tot):.1%} ({ok}/{tot})")
+    print(f"\nSAT: redova sa jednim izrazom za vreme i jednim datetime: {tot} | pravilo se slaže sa zlatnim: {ok / max(1, tot):.1%} ({ok}/{tot})")
     for q, t, g in bad:
-        print(f"  query: {q}\n  rule: {t} | gold: {g}")
+        print(f"  upit: {q}\n  pravilo: {t} | zlatno: {g}")
 
 
 def cmd_check(path):
@@ -200,11 +204,11 @@ def cmd_check(path):
                if k == "datetime" and isinstance(v, str) and re.match(r"\d{4}-\d{2}-\d{2}T", v)]
         if now and len(dts) == 1 and resolve(str(ex["query"]), now, parse_conv("")) is not None:
             elig.append((ex, now, dts[0][:10]))
-    print(f"rows {len(rows)} | with one relative expression and one datetime: {len(elig)}")
+    print(f"redova {len(rows)} | sa jednim relativnim izrazom i jednim datetime: {len(elig)}")
     if not elig:
         return
     best = None
-    print(f"\n{'convention':34} {'correct':>8}")
+    print(f"\n{'konvencija':34} {'tacno':>8}")
     for bare, nxt in itertools.product(("today", "plus7"), ("upcoming", "plus7", "nextweek")):
         conv = {"bare": bare, "next": nxt}
         ok = sum(resolve(str(ex["query"]), now, conv)[0].isoformat() == g for ex, now, g in elig)
@@ -219,12 +223,12 @@ def cmd_check(path):
         by[cls][0] += 1; by[cls][1] += d.isoformat() == g
         if d.isoformat() != g and len(bad) < 6:
             bad.append((ex["query"][:110], now.strftime("%a %Y-%m-%d"), str(d), g))
-    print(f"\nbest: bare={conv['bare']} next={conv['next']}   ->   export FC_DATE_CONV=bare={conv['bare']},next={conv['next']}")
-    print(f"{'class':12} {'n':>5} {'correct':>8}")
+    print(f"\nnajbolja: bare={conv['bare']} next={conv['next']}   ->   export FC_DATE_CONV=bare={conv['bare']},next={conv['next']}")
+    print(f"{'klasa':12} {'n':>5} {'tacno':>8}")
     for k, (n, ok) in sorted(by.items(), key=lambda x: -x[1][0]):
         print(f"{k:12} {n:5d} {ok / n:8.1%}")
     for q, n, d, g in bad:
-        print(f"\n  query: {q}\n  now: {n} | rule: {d} | gold: {g}")
+        print(f"\n  upit: {q}\n  sada: {n} | pravilo: {d} | zlatno: {g}")
 
 
 if __name__ == "__main__":
