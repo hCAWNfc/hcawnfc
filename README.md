@@ -1,6 +1,6 @@
 # hcawn-fc
 
-[![hCAWN-FC7: Say it. The phone does it.](https://raw.githubusercontent.com/hCAWNfc/hcawnfc/main/assets/og.png)](https://cawnai.com)
+![hCAWN-FC7: Say it. The phone does it. A 3.9 MB model that runs on a CPU.](https://raw.githubusercontent.com/hCAWNfc/hcawnfc/main/assets/og.png)
 
 A tiny function-calling model (5.7M parameters, byte-level, CPU only) for **7 phone actions**:
 `send_email`, `create_calendar_event`, `create_contact`, `show_map`, `open_wifi_settings`, `turn_on_flashlight`, `turn_off_flashlight`.
@@ -83,17 +83,52 @@ Strict exact match (tool names and every argument value) on the Mobile Actions e
 
 | | Exact |
 |---|---|
-| int8 | 90.9% |
-| int8 on rephrased queries (905 rows, paraphrased by a different LLM) | 83.2% |
-| model + grammar only, no other layers | 86.5% |
+| int8 | 90.4% |
+| int4 | 90.3% |
+| int8 on rephrased queries (905 rows, paraphrased by a different LLM) | 82.8% |
+| model + grammar only, no other layers (our own evaluator) | 86.5% |
+
+The first three rows were measured with this package, and you can repeat them (see "Reproduce the numbers" below). Queries are limited to 300 characters; 46 of the 961 benchmark requests are longer, and on the 915 up to 300 characters int8 gets 90.3%.
 
 Weaker on unusual phrasings ("tell him that ...", "... saying X"). The confidence gate is not a guarantee: it stops most, not all, wrong calls.
 
+## Model details
+
+| | |
+|---|---|
+| Parameters | 5,742,720 (5.74M) |
+| Architecture | hCAWN hybrid: 6 layers (4 recurrent associative-memory layers and 2 local-attention layers), hidden size 128, 4 heads, local attention window of 4,096 bytes |
+| Vocabulary | 258 symbols: 256 raw UTF-8 bytes plus start and end markers. No tokenizer |
+| Files | int8 6.0 MB, int4 3.9 MB |
+| Pretraining | next-byte prediction on English web text (FinePDFs-Edu, DCLM, FineWeb-Edu), no function-calling data. Best checkpoint at step 241,000 of 300,000 (about 15.8 billion bytes), validation loss 1.068 nats per byte on WikiText-103 |
+| Fine-tuning | supervised, on Mobile Actions plus 16,000 LLM paraphrases of its requests. Examples of up to 2,048 bytes (tool definitions, date, request and answer) |
+| Speed | median about 0.2 s (int8) and 0.3 s (int4) per request on one core of a desktop CPU with AVX2 |
+
+**Why 300 characters?** It is a safety limit of the package and the demo, not a limit of the model. The tool definitions and the date take about 1.2 KB of the 2,048 bytes the model was fine-tuned on, so there are roughly 850 bytes left for the request and the answer. In the benchmark 4.8% of the requests are longer than 300 characters (up to 740), and the model gets 43 of those 46 right.
+
+Full details: https://huggingface.co/datatab/hcawn-fc7
+
+## Reproduce the numbers
+
+The folder `eval_check/` has the evaluation requests and a short script that uses only this package and its own scorer (strict exact match):
+
+```bash
+pip install hcawn-fc
+hcawn-fc download int8 && hcawn-fc download int4
+cd eval_check
+python3 verify_fc7.py data/fc_mobile_eval.jsonl --model int8 --procs 4 --allow-long
+python3 verify_fc7.py data/fc_mobile_eval.jsonl --model int4 --procs 4 --allow-long
+python3 verify_fc7.py data/fc_mobile_eval_para.jsonl --model int8 --procs 4 --allow-long --name rewritten
+```
+
+Expected: 90.4% (int8), 90.3% (int4) and 82.8% (rewritten requests), within about 2 points of noise. Every miss is written to `out/*_errors.jsonl`. The Linux x86-64 engine is needed.
+
 ## Data and licences
 
-* Code: Apache-2.0.
+* Code: Apache-2.0. The native inference engine ships as a compiled binary inside the Linux x86-64 wheels; its source code is not published.
 * Trained on the **Mobile Actions** dataset (Google, CC BY 4.0) plus query-form augmentation and 16,000 paraphrases of the training queries written by an LLM (Gemini 2.5 Flash Lite) and filtered automatically. Evaluation paraphrases were written by GPT-4o-mini and were never used for training.
 * Model weights: CC BY 4.0 (Hugging Face: https://huggingface.co/datatab/hcawn-fc7). See `NOTICE`.
+* Evaluation data in `eval_check/data/`: requests and expected calls derived from the Mobile Actions dataset (Google, CC BY 4.0), and 905 rewrites of them written by GPT-4o-mini.
 
 ## Custom models
 
