@@ -10,3 +10,6 @@ csrc/
 from_fc/
 *.bin
 src/hcawn_fc/_lib/
+*.bak
+*.bak_*
+patch_*.py
